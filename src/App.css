@@ -1,7 +1,8 @@
 .app {
   min-height: 100vh;
   color: var(--ink-900);
-  background: radial-gradient(circle at 10% 10%, #f8f3ff 0%, transparent 60%),
+  background:
+    radial-gradient(circle at 10% 10%, #f8f3ff 0%, transparent 60%),
     radial-gradient(circle at 90% 5%, #e9f2ff 0%, transparent 55%),
     linear-gradient(135deg, #f7f4ef 0%, #eef3f8 45%, #f6f0f7 100%);
 }
@@ -96,19 +97,14 @@
   color: #fff;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 20px rgba(16, 24, 32, 0.18);
-}
-
-.new-question-button {
-  align-self: flex-start;
-  padding: 0.9rem 2rem;
-  font-size: 1rem;
-  letter-spacing: 0.04em;
 }
 
 .layout {
@@ -193,7 +189,9 @@
   border: 1px solid transparent;
   background: #f8fafc;
   cursor: pointer;
-  transition: border 0.2s ease, background 0.2s ease;
+  transition:
+    border 0.2s ease,
+    background 0.2s ease;
 }
 
 .question-item.selected {
@@ -414,28 +412,16 @@
 }
 
 .code-split {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
-  align-items: start;
 }
 
 .code-separator {
-  width: 1px;
-  height: 100%;
+  width: 100%;
+  height: 1px;
   background: #e2e8f0;
   opacity: 0.5;
-}
-
-@media (max-width: 900px) {
-  .code-split {
-    grid-template-columns: 1fr;
-  }
-
-  .code-separator {
-    height: 1px;
-    width: 100%;
-  }
 }
 
 .code-title {
@@ -465,6 +451,50 @@
   margin: 0.2rem 0 0;
   font-size: 0.78rem;
   color: var(--ink-500);
+}
+
+.capture-actions {
+  display: flex;
+}
+
+.capture-button {
+  align-self: flex-start;
+}
+
+.capture-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.capture-console {
+  border: 1px solid var(--ink-200);
+  border-radius: 14px;
+  background: #0b1220;
+  color: #dbe7ff;
+  padding: 0.75rem;
+}
+
+.capture-console-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+}
+
+.capture-console-output {
+  margin: 0;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+.explanation-text {
+  white-space: pre-wrap;
+  margin: 0;
 }
 
 @keyframes floatIn {

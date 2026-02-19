@@ -1,14 +1,19 @@
 import { useState, useEffect } from "react";
 import "./App.css";
 import AnswerView from "./components/AnswerView";
+import CapturePanel from "./components/CapturePanel";
 import QuestionList from "./components/QuestionList";
 import QuestionView from "./components/QuestionView";
 import StartScreen from "./components/StartScreen";
 import Topbar from "./components/Topbar";
 import { validateAnswerApiResponse } from "./answer";
 
-const questionUrl = "http://localhost:8000/api/questions";
-const answersUrl = "http://localhost:8000/api/answers";
+const API_BASE = (
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
+).replace(/\/$/, "");
+const questionUrl = `${API_BASE}/api/questions`;
+const answersUrl = `${API_BASE}/api/answers`;
+const captureUrl = `${API_BASE}/api/capture`;
 const makeAnswerUrl = (id) => `${questionUrl}/${id}/answers`;
 const makeAnswerFilesUrl = (id, filename) =>
   `${answersUrl}/${id}/files/${filename}`;
@@ -33,27 +38,89 @@ const collectAvailableAnswerFiles = (outputFiles) => {
   }
   return availableFiles;
 };
+
 function App() {
   const [started, setStarted] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState([]);
+  const reloadQuestions = async () => {
+    const response = await fetch(questionUrl);
+    if (!response.ok) {
+      throw new Error(`Question request failed: ${response.status}`);
+    }
+    const data = await response.json();
+    const nextQuestions = Array.isArray(data) ? data : [];
+    setQuestions(nextQuestions);
+    setSelectedId((prevId) => {
+      if (!prevId) {
+        return nextQuestions[0]?.id ?? null;
+      }
+      const exists = nextQuestions.some((question) => question.id === prevId);
+      return exists ? prevId : (nextQuestions[0]?.id ?? null);
+    });
+  };
 
   useEffect(() => {
     const fetchQuestion = async () => {
-      let response = await fetch(questionUrl);
-      let data = await response.json();
-      setQuestions(data);
+      await reloadQuestions();
     };
     fetchQuestion();
   }, []);
+  useEffect(() => {
+    if (started && !selectedId && questions.length > 0) {
+      setSelectedId(questions[0].id);
+    }
+  }, [started, selectedId, questions]);
+
   console.log("Here are some questions", questions);
   const selectedQuestion = questions.find(
-    (question) => question.id === selectedId
+    (question) => question.id === selectedId,
   );
+  // App.jsx
+  const startCapture = async (onEvent) => {
+    const response = await fetch(captureUrl, { method: "POST" });
+    if (!response.ok)
+      throw new Error(`Capture request failed: ${response.status}`);
+
+    const data = await response.json();
+    const jobId = data?.jobId ?? data?.job_id;
+    if (!jobId) throw new Error("Capture response missing jobId.");
+
+    return new Promise((resolve, reject) => {
+      const eventSource = new EventSource(`${captureUrl}/${jobId}/stream`);
+
+      eventSource.onmessage = (event) => {
+        const eventData = JSON.parse(event.data);
+
+        // push every event to UI
+        onEvent?.(eventData);
+
+        if (eventData.type === "complete") {
+          eventSource.close();
+          reloadQuestions()
+            .then(() => resolve(eventData))
+            .catch(reject);
+        } else if (eventData.type === "error") {
+          eventSource.close();
+          reject(new Error(eventData.error || "Capture failed"));
+        }
+      };
+
+      eventSource.onerror = () => {
+        eventSource.close();
+        reject(new Error("Capture stream connection failed."));
+      };
+    });
+  };
+
   useEffect(() => {
     const fetchAnswers = async () => {
       console.log("Selected question", selectedQuestion);
+      if (!selectedQuestion?.id) {
+        setAnswers([]);
+        return;
+      }
 
       const answersUrl = makeAnswerUrl(selectedQuestion.id);
       let response = await fetch(answersUrl);
@@ -91,7 +158,7 @@ function App() {
       }
       console.log("Relevant answer: ", releventAnswer);
       const availableFiles = collectAvailableAnswerFiles(
-        releventAnswer.output_files
+        releventAnswer.output_files,
       );
       for (const fileName of availableFiles) {
         const isExplanation = /^EXPLANATION(\..+)?$/i.test(fileName);
@@ -110,7 +177,7 @@ function App() {
         const fileResponse = await fetch(fileUrl);
         if (!fileResponse.ok) {
           console.log(
-            `File fetch failed: ${fileName} (${fileResponse.status})`
+            `File fetch failed: ${fileName} (${fileResponse.status})`,
           );
           continue;
         }
@@ -130,7 +197,7 @@ function App() {
               return { ...answer, optimizedCode: fileText };
             }
             return answer;
-          })
+          }),
         );
         console.log(`Fetched file: ${fileName}`);
       }
@@ -152,20 +219,22 @@ function App() {
           <QuestionList
             questions={questions}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            setSelectedId={setSelectedId}
           />
-          {selectedQuestion ? (
-            <main className="canvas">
-              <QuestionView question={selectedQuestion} />
-              <AnswerView answer={answers[0]} />
-            </main>
-          ) : null}
+          <main className="canvas">
+            {selectedQuestion ? (
+              <>
+                <QuestionView question={selectedQuestion} />
+                <AnswerView answer={answers[0]} />
+              </>
+            ) : null}
+            <CapturePanel onCapture={startCapture} />
+          </main>
         </div>
       ) : (
         <StartScreen
           onStart={() => {
             setStarted(true);
-            setSelectedId(QUESTIONS[0]?.id ?? null);
           }}
         />
       )}

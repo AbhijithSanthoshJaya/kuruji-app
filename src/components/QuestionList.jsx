@@ -1,4 +1,4 @@
-function QuestionList({ questions, selectedId, onSelect }) {
+function QuestionList({ questions, selectedId, setSelectedId }) {
   return (
     <aside className="panel">
       <div className="panel-header">
@@ -15,7 +15,7 @@ function QuestionList({ questions, selectedId, onSelect }) {
             className={`question-item ${
               selectedId === question.id ? "selected" : ""
             }`}
-            onClick={() => onSelect(question.id)}
+            onClick={() => setSelectedId(question.id)}
           >
             <div>
               <div className="question-title">{question.title}</div>

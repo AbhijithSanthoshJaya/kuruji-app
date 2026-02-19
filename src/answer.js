@@ -1,4 +1,4 @@
-export const ANSWERS = [
+export const ANSWEREXAMPLE = [
   {
     id: "ans-1",
     language: "Python",

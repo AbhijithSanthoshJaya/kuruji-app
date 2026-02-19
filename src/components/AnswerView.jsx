@@ -7,7 +7,9 @@ function AnswerView({ answer }) {
         <div className="answer-header">
           <div>
             <div className="answer-language">No answer yet</div>
-            <div className="answer-approach">Select a question with answers.</div>
+            <div className="answer-approach">
+              Select a question with answers.
+            </div>
           </div>
         </div>
       </section>
@@ -30,12 +32,12 @@ function AnswerView({ answer }) {
 
       <div className="explain">
         <div>
-          <div className="explain-title">Explanation.txt</div>
-          <p>{answer.explanation}</p>
+          <div className="explain-title">Explanation</div>
+          <pre className="explanation-text">
+            {answer.explanation || "Explanation not available."}
+          </pre>
         </div>
       </div>
-
-      <button className="primary new-question-button">New Question</button>
     </section>
   );
 }
