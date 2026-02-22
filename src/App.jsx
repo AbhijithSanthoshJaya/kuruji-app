@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import "./App.css";
 import AnswerView from "./components/AnswerView";
 import CapturePanel from "./components/CapturePanel";
+import FullscreenGate from "./components/FullscreenGate";
 import QuestionList from "./components/QuestionList";
 import QuestionView from "./components/QuestionView";
 import StartScreen from "./components/StartScreen";
@@ -40,6 +41,7 @@ const collectAvailableAnswerFiles = (outputFiles) => {
 };
 
 function App() {
+  const [introDone, setIntroDone] = useState(false);
   const [started, setStarted] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -213,7 +215,7 @@ function App() {
 
   return (
     <div className="app">
-      <Topbar />
+      {started ? <Topbar /> : null}
       {started ? (
         <div className="layout simple">
           <QuestionList
@@ -231,10 +233,16 @@ function App() {
             <CapturePanel onCapture={startCapture} />
           </main>
         </div>
+      ) : introDone ? (
+        <FullscreenGate
+          onEnter={() => {
+            setStarted(true);
+          }}
+        />
       ) : (
         <StartScreen
           onStart={() => {
-            setStarted(true);
+            setIntroDone(true);
           }}
         />
       )}

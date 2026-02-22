@@ -1,4 +1,16 @@
 function StartScreen({ onStart }) {
+  const handleStart = async () => {
+    const rootElement = document.documentElement;
+    if (!document.fullscreenElement && rootElement?.requestFullscreen) {
+      try {
+        await rootElement.requestFullscreen();
+      } catch {
+        // Fullscreen may be blocked by browser/device policy; continue anyway.
+      }
+    }
+    onStart();
+  };
+
   return (
     <main className="canvas start-screen">
       <section className="question-card">
@@ -11,7 +23,7 @@ function StartScreen({ onStart }) {
             </p>
           </div>
         </div>
-        <button className="primary start-button" onClick={onStart}>
+        <button className="primary start-button" onClick={handleStart}>
           START
         </button>
       </section>
