@@ -1,6 +1,14 @@
 import CodeView from "./CodeView";
 
-function AnswerView({ answer }) {
+function AnswerView({ answer, isLoadingAnswers }) {
+  if (isLoadingAnswers) {
+    return (
+      <section className="answer-focus answer-loading">
+        <div className="answer-loading-spinner" aria-hidden="true" />
+        <div className="answer-language">Loading answers…</div>
+      </section>
+    );
+  }
   if (!answer) {
     return (
       <section className="answer-focus">
