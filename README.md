@@ -130,3 +130,4 @@ src/
 
 - `.env` is ignored by git.
 - Keep sensitive host/IP values out of committed code.
+- **App.jsx** currently holds all API URLs, fetch logic, SSE, and state. For a planned refactor (API layer + custom hooks), see `.cursor/skills/kuruji-app/SKILL.md` → **Refactoring: App.jsx does too much**.
