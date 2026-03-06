@@ -107,6 +107,42 @@
   box-shadow: 0 12px 20px rgba(16, 24, 32, 0.18);
 }
 
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 2.5rem;
+  margin: 0 2.5rem;
+  margin-top: 1rem;
+  border-radius: 14px;
+  border: 1px solid #dc2626;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.9rem;
+}
+
+.error-banner__message {
+  flex: 1;
+  min-width: 0;
+}
+
+.error-banner__dismiss {
+  flex-shrink: 0;
+  padding: 0.4rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid #dc2626;
+  background: #fff;
+  color: #991b1b;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.error-banner__dismiss:hover {
+  background: #fee2e2;
+}
+
 .layout {
   display: grid;
   gap: 1.5rem;
