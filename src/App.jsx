@@ -45,7 +45,7 @@ function App() {
   const [started, setStarted] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [questions, setQuestions] = useState([]);
-  const [answers, setAnswers] = useState([]);
+  const [answer, setAnswer] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingAnswers, setIsLoadingAnswers] = useState(false);
@@ -130,7 +130,7 @@ function App() {
   useEffect(() => {
     const fetchAnswers = async () => {
       if (!selectedQuestion?.id) {
-        setAnswers([]);
+        setAnswer(null);
         setIsLoadingAnswers(false);
         return;
       }
@@ -146,15 +146,20 @@ function App() {
         if (!Array.isArray(data)) {
           throw new Error("Answer response is not an array.");
         }
-        for (const answer of data) {
-          const validation = validateAnswerApiResponse(answer);
+        for (const a of data) {
+          const validation = validateAnswerApiResponse(a);
           if (!validation.valid) {
             throw new Error(`Answer validation failed: ${validation.error}`);
           }
         }
-        setAnswers(data);
+        const sorted = [...data].sort((a, b) => {
+          const tA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const tB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return tB - tA;
+        });
+        setAnswer(sorted[0] ?? null);
       } catch (err) {
-        setAnswers([]);
+        setAnswer(null);
         setError(err);
         console.error("Error fetching answers:", err);
       } finally {
@@ -164,42 +169,30 @@ function App() {
     fetchAnswers();
   }, [selectedId]);
 
-  const sortedAnswers = [...answers].sort((a, b) => {
-    const tA = a.created_at ? new Date(a.created_at).getTime() : 0;
-    const tB = b.created_at ? new Date(b.created_at).getTime() : 0;
-    return tB - tA;
-  });
-  const relevantAnswer = sortedAnswers[0] ?? null;
   useEffect(() => {
     const fetchAnswerDetails = async () => {
-      if (!relevantAnswer) {
+      if (!answer) {
         return;
       }
-      if (
-        relevantAnswer.explanation &&
-        relevantAnswer.bruteCode &&
-        relevantAnswer.optimizedCode
-      ) {
+      if (answer.explanation && answer.bruteCode && answer.optimizedCode) {
         return;
       }
       setError(null);
       try {
-        const availableFiles = collectAvailableAnswerFiles(
-          relevantAnswer.output_files,
-        );
+        const availableFiles = collectAvailableAnswerFiles(answer.output_files);
         for (const fileName of availableFiles) {
           const isExplanation = /^EXPLANATION(\..+)?$/i.test(fileName);
           const isBrute = /^brute_force_solution(\..+)?$/i.test(fileName);
           const isOptimized = /^optimized_solution(\..+)?$/i.test(fileName);
           if (
             (!isExplanation && !isBrute && !isOptimized) ||
-            (isExplanation && relevantAnswer.explanation) ||
-            (isBrute && relevantAnswer.bruteCode) ||
-            (isOptimized && relevantAnswer.optimizedCode)
+            (isExplanation && answer.explanation) ||
+            (isBrute && answer.bruteCode) ||
+            (isOptimized && answer.optimizedCode)
           ) {
             continue;
           }
-          const fileUrl = makeAnswerFilesUrl(relevantAnswer.id, fileName);
+          const fileUrl = makeAnswerFilesUrl(answer.id, fileName);
           const fileResponse = await fetch(fileUrl);
           if (!fileResponse.ok) {
             throw new Error(
@@ -207,23 +200,13 @@ function App() {
             );
           }
           const fileText = await fileResponse.text();
-          setAnswers((prevAnswers) =>
-            prevAnswers.map((answer) => {
-              if (answer.id !== relevantAnswer.id) {
-                return answer;
-              }
-              if (isExplanation) {
-                return { ...answer, explanation: fileText };
-              }
-              if (isBrute) {
-                return { ...answer, bruteCode: fileText };
-              }
-              if (isOptimized) {
-                return { ...answer, optimizedCode: fileText };
-              }
-              return answer;
-            }),
-          );
+          setAnswer((prev) => {
+            if (!prev || prev.id !== answer.id) return prev;
+            if (isExplanation) return { ...prev, explanation: fileText };
+            if (isBrute) return { ...prev, bruteCode: fileText };
+            if (isOptimized) return { ...prev, optimizedCode: fileText };
+            return prev;
+          });
         }
       } catch (err) {
         setError(err);
@@ -232,11 +215,11 @@ function App() {
     };
     fetchAnswerDetails();
   }, [
-    relevantAnswer?.id,
-    relevantAnswer?.output_files,
-    relevantAnswer?.explanation,
-    relevantAnswer?.bruteCode,
-    relevantAnswer?.optimizedCode,
+    answer?.id,
+    answer?.output_files,
+    answer?.explanation,
+    answer?.bruteCode,
+    answer?.optimizedCode,
   ]);
 
   return (
@@ -273,7 +256,10 @@ function App() {
               {selectedQuestion ? (
                 <>
                   <QuestionView question={selectedQuestion} />
-                  <AnswerView answer={relevantAnswer} isLoadingAnswers={isLoadingAnswers} />
+                  <AnswerView
+                    answer={answer}
+                    isLoadingAnswers={isLoadingAnswers}
+                  />
                 </>
               ) : null}
               <CapturePanel onCapture={startCapture} />

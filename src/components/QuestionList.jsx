@@ -17,9 +17,9 @@ function QuestionList({ questions, selectedId, setSelectedId }) {
             }`}
             onClick={() => setSelectedId(question.id)}
           >
-            <div>
-              <div className="question-title">{question.title}</div>
-              <div className="question-meta">uuid: {question.id}</div>
+            <div className="question-title">{question.title}</div>
+            <div className="question-meta question-meta--uuid">
+              uuid: {question.id}
             </div>
             <span className="chip">{question.category}</span>
           </button>
