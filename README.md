@@ -50,7 +50,7 @@ Configured from `VITE_API_BASE_URL`:
 Create `.env` in project root:
 
 ```env
-VITE_API_BASE_URL=http://localhost:8000
+VITE_API_BASE_URL=http://localhost:3000
 ```
 
 Reference template: `.env.example`.
@@ -75,7 +75,7 @@ http://localhost:5173
 Run frontend:
 
 ```bash
-npm run dev -- --host 0.0.0.0 --port 5173
+npm run dev -- --host 0.0.0.0 --port 5174
 ```
 
 Run FastAPI backend:
@@ -130,3 +130,4 @@ src/
 
 - `.env` is ignored by git.
 - Keep sensitive host/IP values out of committed code.
+- **App.jsx** currently holds all API URLs, fetch logic, SSE, and state. For a planned refactor (API layer + custom hooks), see `.cursor/skills/kuruji-app/SKILL.md` → **Refactoring: App.jsx does too much**.

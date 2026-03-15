@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-function CapturePanel({ onCapture }) {
+export function useCaptureConsole(onCapture) {
   const [lines, setLines] = useState([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const consoleRef = useRef(null);
 
-  const addLine = (text) => {
+  const addLine = useCallback((text) => {
     const now = new Date().toLocaleTimeString();
     setLines((prev) => [...prev, `[${now}] ${text}`].slice(-100));
-  };
+  }, []);
 
   useEffect(() => {
     if (!consoleRef.current) {
@@ -17,7 +17,7 @@ function CapturePanel({ onCapture }) {
     consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
   }, [lines]);
 
-  const handleCapture = async () => {
+  const handleCapture = useCallback(async () => {
     setIsCapturing(true);
     try {
       await onCapture((eventData) => {
@@ -45,29 +45,7 @@ function CapturePanel({ onCapture }) {
     } finally {
       setIsCapturing(false);
     }
-  };
-  return (
-    <section className="capture-panel">
-      <div className="capture-actions">
-        <button
-          type="button"
-          className="primary capture-button"
-          onClick={handleCapture}
-          disabled={isCapturing}
-        >
-          {isCapturing ? "Capturing..." : "Capture"}
-        </button>
-      </div>
-      <div className="capture-console">
-        <div className="capture-console-title">Console</div>
-        <pre className="capture-console-output" ref={consoleRef}>
-          {lines.length === 0
-            ? "No captures yet. Click Capture to log API response values."
-            : lines.join("\n\n")}
-        </pre>
-      </div>
-    </section>
-  );
-}
+  }, [onCapture, addLine]);
 
-export default CapturePanel;
+  return { lines, isCapturing, handleCapture, consoleRef };
+}

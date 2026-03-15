@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "./App.css";
+//import "./components/AnswerView/Answerview.css";
 import AnswerView from "./components/AnswerView";
 import CapturePanel from "./components/CapturePanel";
 import FullscreenGate from "./components/FullscreenGate";
@@ -18,6 +19,13 @@ const captureUrl = `${API_BASE}/api/capture`;
 const makeAnswerUrl = (id) => `${questionUrl}/${id}/answers`;
 const makeAnswerFilesUrl = (id, filename) =>
   `${answersUrl}/${id}/files/${filename}`;
+
+const sortByCreatedDesc = (items) =>
+  [...(items || [])].sort((a, b) => {
+    const tA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const tB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return tB - tA;
+  });
 const collectAvailableAnswerFiles = (outputFiles) => {
   const expectedFiles = [
     "brute_force_solution",
@@ -43,42 +51,40 @@ const collectAvailableAnswerFiles = (outputFiles) => {
 function App() {
   const [introDone, setIntroDone] = useState(false);
   const [started, setStarted] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [questions, setQuestions] = useState([]);
-  const [answers, setAnswers] = useState([]);
+  const [answer, setAnswer] = useState(null);
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingAnswers, setIsLoadingAnswers] = useState(false);
   const reloadQuestions = async () => {
     const response = await fetch(questionUrl);
     if (!response.ok) {
       throw new Error(`Question request failed: ${response.status}`);
     }
     const data = await response.json();
-    const nextQuestions = Array.isArray(data) ? data : [];
+    const raw = Array.isArray(data) ? data : [];
+    const nextQuestions = sortByCreatedDesc(raw);
     setQuestions(nextQuestions);
-    setSelectedId((prevId) => {
-      if (!prevId) {
-        return nextQuestions[0]?.id ?? null;
-      }
-      const exists = nextQuestions.some((question) => question.id === prevId);
-      return exists ? prevId : (nextQuestions[0]?.id ?? null);
-    });
+    setSelectedQuestion(nextQuestions[0] ?? null);
   };
 
   useEffect(() => {
     const fetchQuestion = async () => {
-      await reloadQuestions();
+      setError(null);
+      setIsLoading(true);
+      try {
+        await reloadQuestions();
+      } catch (err) {
+        setError(err);
+        setIsLoading(false);
+        console.error("Error fetching questions:", err);
+      }
+      setIsLoading(false);
     };
     fetchQuestion();
   }, []);
-  useEffect(() => {
-    if (started && !selectedId && questions.length > 0) {
-      setSelectedId(questions[0].id);
-    }
-  }, [started, selectedId, questions]);
 
-  console.log("Here are some questions", questions);
-  const selectedQuestion = questions.find(
-    (question) => question.id === selectedId,
-  );
   // App.jsx
   const startCapture = async (onEvent) => {
     const response = await fetch(captureUrl, { method: "POST" });
@@ -86,7 +92,7 @@ function App() {
       throw new Error(`Capture request failed: ${response.status}`);
 
     const data = await response.json();
-    const jobId = data?.jobId ?? data?.job_id;
+    const jobId = data?.job_id;
     if (!jobId) throw new Error("Capture response missing jobId.");
 
     return new Promise((resolve, reject) => {
@@ -95,7 +101,7 @@ function App() {
       eventSource.onmessage = (event) => {
         const eventData = JSON.parse(event.data);
 
-        // push every event to UI
+        // Forward each SSE payload to the UI callback (which logs it to state, not DOM)
         onEvent?.(eventData);
 
         if (eventData.type === "complete") {
@@ -118,121 +124,139 @@ function App() {
 
   useEffect(() => {
     const fetchAnswers = async () => {
-      console.log("Selected question", selectedQuestion);
       if (!selectedQuestion?.id) {
-        setAnswers([]);
+        setAnswer(null);
+        setIsLoadingAnswers(false);
         return;
       }
-
-      const answersUrl = makeAnswerUrl(selectedQuestion.id);
-      let response = await fetch(answersUrl);
-      if (!response.ok) {
-        throw new Error(`Answer request failed: ${response.status}`);
-      }
-      let answers = await response.json();
-      if (!Array.isArray(answers)) {
-        throw new Error("Answer response is not an array.");
-      }
-      for (const answer of answers) {
-        const validation = validateAnswerApiResponse(answer);
-        if (!validation.valid) {
-          throw new Error(`Answer validation failed: ${validation.error}`);
+      setError(null);
+      setIsLoadingAnswers(true);
+      try {
+        const url = makeAnswerUrl(selectedQuestion.id);
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Answer request failed: ${response.status}`);
         }
+        const data = await response.json();
+        if (!Array.isArray(data)) {
+          throw new Error("Answer response is not an array.");
+        }
+        for (const a of data) {
+          const validation = validateAnswerApiResponse(a);
+          if (!validation.valid) {
+            throw new Error(`Answer validation failed: ${validation.error}`);
+          }
+        }
+        const sorted = sortByCreatedDesc(data);
+        setAnswer(sorted[0] ?? null);
+      } catch (err) {
+        setAnswer(null);
+        setError(err);
+        console.error("Error fetching answers:", err);
+      } finally {
+        setIsLoadingAnswers(false);
       }
-      setAnswers(answers);
     };
     fetchAnswers();
-  }, [selectedId]);
-  console.log("Here are answers", answers);
-  let releventAnswer = answers[0];
+  }, [selectedQuestion?.id]);
+
   useEffect(() => {
     const fetchAnswerDetails = async () => {
-      if (!releventAnswer) {
-        console.log("No relevant answer found yet.");
+      if (!answer) {
         return;
       }
-      if (
-        releventAnswer.explanation &&
-        releventAnswer.bruteCode &&
-        releventAnswer.optimizedCode
-      ) {
+      if (answer.explanation && answer.bruteCode && answer.optimizedCode) {
         return;
       }
-      console.log("Relevant answer: ", releventAnswer);
-      const availableFiles = collectAvailableAnswerFiles(
-        releventAnswer.output_files,
-      );
-      for (const fileName of availableFiles) {
-        const isExplanation = /^EXPLANATION(\..+)?$/i.test(fileName);
-        const isBrute = /^brute_force_solution(\..+)?$/i.test(fileName);
-        const isOptimized = /^optimized_solution(\..+)?$/i.test(fileName);
-        if (
-          (!isExplanation && !isBrute && !isOptimized) ||
-          (isExplanation && releventAnswer.explanation) ||
-          (isBrute && releventAnswer.bruteCode) ||
-          (isOptimized && releventAnswer.optimizedCode)
-        ) {
-          continue;
+      setError(null);
+      try {
+        const availableFiles = collectAvailableAnswerFiles(answer.output_files);
+        for (const fileName of availableFiles) {
+          const isExplanation = /^EXPLANATION(\..+)?$/i.test(fileName);
+          const isBrute = /^brute_force_solution(\..+)?$/i.test(fileName);
+          const isOptimized = /^optimized_solution(\..+)?$/i.test(fileName);
+          if (
+            (!isExplanation && !isBrute && !isOptimized) ||
+            (isExplanation && answer.explanation) ||
+            (isBrute && answer.bruteCode) ||
+            (isOptimized && answer.optimizedCode)
+          ) {
+            continue;
+          }
+          const fileUrl = makeAnswerFilesUrl(answer.id, fileName);
+          const fileResponse = await fetch(fileUrl);
+          if (!fileResponse.ok) {
+            throw new Error(
+              `Answer file failed: ${fileName} (${fileResponse.status})`,
+            );
+          }
+          const fileText = await fileResponse.text();
+          setAnswer((prev) => {
+            if (!prev || prev.id !== answer.id) return prev;
+            if (isExplanation) return { ...prev, explanation: fileText };
+            if (isBrute) return { ...prev, bruteCode: fileText };
+            if (isOptimized) return { ...prev, optimizedCode: fileText };
+            return prev;
+          });
         }
-        const fileUrl = makeAnswerFilesUrl(releventAnswer.id, fileName);
-        console.log("Answer file url", fileUrl);
-        const fileResponse = await fetch(fileUrl);
-        if (!fileResponse.ok) {
-          console.log(
-            `File fetch failed: ${fileName} (${fileResponse.status})`,
-          );
-          continue;
-        }
-        const fileText = await fileResponse.text();
-        setAnswers((prevAnswers) =>
-          prevAnswers.map((answer) => {
-            if (answer.id !== releventAnswer.id) {
-              return answer;
-            }
-            if (isExplanation) {
-              return { ...answer, explanation: fileText };
-            }
-            if (isBrute) {
-              return { ...answer, bruteCode: fileText };
-            }
-            if (isOptimized) {
-              return { ...answer, optimizedCode: fileText };
-            }
-            return answer;
-          }),
-        );
-        console.log(`Fetched file: ${fileName}`);
+      } catch (err) {
+        setError(err);
+        console.error("Error fetching answer details:", err);
       }
     };
     fetchAnswerDetails();
   }, [
-    releventAnswer?.id,
-    releventAnswer?.output_files,
-    releventAnswer?.explanation,
-    releventAnswer?.bruteCode,
-    releventAnswer?.optimizedCode,
+    answer?.id,
+    answer?.output_files,
+    answer?.explanation,
+    answer?.bruteCode,
+    answer?.optimizedCode,
   ]);
 
   return (
     <div className="app">
       {started ? <Topbar /> : null}
-      {started ? (
-        <div className="layout simple">
-          <QuestionList
-            questions={questions}
-            selectedId={selectedId}
-            setSelectedId={setSelectedId}
-          />
-          <main className="canvas">
-            {selectedQuestion ? (
-              <>
-                <QuestionView question={selectedQuestion} />
-                <AnswerView answer={answers[0]} />
-              </>
-            ) : null}
-            <CapturePanel onCapture={startCapture} />
-          </main>
+      {isLoading ? (
+        <div className="app-loading" role="status" aria-live="polite">
+          Loading…
         </div>
+      ) : started ? (
+        <>
+          {error ? (
+            <div className="error-banner" role="alert">
+              <span className="error-banner__message">
+                {error instanceof Error ? error.message : String(error)}
+              </span>
+              <button
+                type="button"
+                className="error-banner__dismiss"
+                onClick={() => setError(null)}
+                aria-label="Dismiss error"
+              >
+                Dismiss
+              </button>
+            </div>
+          ) : null}
+          <div className="layout simple">
+            <QuestionList
+              questions={questions}
+              selectedQuestion={selectedQuestion}
+              setSelectedQuestion={setSelectedQuestion}
+            />
+            <main className="canvas">
+              {selectedQuestion ? (
+                <>
+                  <QuestionView question={selectedQuestion} />
+                  <AnswerView
+                    answer={answer}
+                    isLoadingAnswers={isLoadingAnswers}
+                  />
+                </>
+              ) : null}
+              <CapturePanel onCapture={startCapture} />
+            </main>
+          </div>
+        </>
       ) : introDone ? (
         <FullscreenGate
           onEnter={() => {

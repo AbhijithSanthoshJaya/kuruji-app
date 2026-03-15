@@ -1,0 +1,50 @@
+/* AnswerView section container */
+.answer-focus {
+  background: #fff;
+  border-radius: 22px;
+  border: 1px solid var(--ink-100);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.08);
+  animation: floatIn 0.7s ease forwards;
+}
+
+.answer-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.answer-language {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.answer-approach {
+  font-size: 0.85rem;
+  color: var(--ink-500);
+}
+
+/* Loading state */
+.answer-focus.answer-loading {
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+}
+
+.answer-loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--ink-200);
+  border-top-color: #101820;
+  border-radius: 50%;
+  animation: answer-spin 0.8s linear infinite;
+}
+
+@keyframes answer-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
