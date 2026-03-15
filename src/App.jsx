@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "./App.css";
+//import "./components/AnswerView/Answerview.css";
 import AnswerView from "./components/AnswerView";
 import CapturePanel from "./components/CapturePanel";
 import FullscreenGate from "./components/FullscreenGate";
@@ -18,6 +19,13 @@ const captureUrl = `${API_BASE}/api/capture`;
 const makeAnswerUrl = (id) => `${questionUrl}/${id}/answers`;
 const makeAnswerFilesUrl = (id, filename) =>
   `${answersUrl}/${id}/files/${filename}`;
+
+const sortByCreatedDesc = (items) =>
+  [...(items || [])].sort((a, b) => {
+    const tA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const tB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return tB - tA;
+  });
 const collectAvailableAnswerFiles = (outputFiles) => {
   const expectedFiles = [
     "brute_force_solution",
@@ -43,7 +51,7 @@ const collectAvailableAnswerFiles = (outputFiles) => {
 function App() {
   const [introDone, setIntroDone] = useState(false);
   const [started, setStarted] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [answer, setAnswer] = useState(null);
   const [error, setError] = useState(null);
@@ -55,15 +63,10 @@ function App() {
       throw new Error(`Question request failed: ${response.status}`);
     }
     const data = await response.json();
-    const nextQuestions = Array.isArray(data) ? data : [];
+    const raw = Array.isArray(data) ? data : [];
+    const nextQuestions = sortByCreatedDesc(raw);
     setQuestions(nextQuestions);
-    setSelectedId((prevId) => {
-      if (!prevId) {
-        return nextQuestions[0]?.id ?? null;
-      }
-      const exists = nextQuestions.some((question) => question.id === prevId);
-      return exists ? prevId : (nextQuestions[0]?.id ?? null);
-    });
+    setSelectedQuestion(nextQuestions[0] ?? null);
   };
 
   useEffect(() => {
@@ -81,15 +84,7 @@ function App() {
     };
     fetchQuestion();
   }, []);
-  useEffect(() => {
-    if (started && !selectedId && questions.length > 0) {
-      setSelectedId(questions[0].id ?? null);
-    }
-  }, [started, selectedId, questions]);
 
-  const selectedQuestion = questions.find(
-    (question) => question.id === selectedId,
-  );
   // App.jsx
   const startCapture = async (onEvent) => {
     const response = await fetch(captureUrl, { method: "POST" });
@@ -106,7 +101,7 @@ function App() {
       eventSource.onmessage = (event) => {
         const eventData = JSON.parse(event.data);
 
-        // push every event to UI
+        // Forward each SSE payload to the UI callback (which logs it to state, not DOM)
         onEvent?.(eventData);
 
         if (eventData.type === "complete") {
@@ -152,11 +147,7 @@ function App() {
             throw new Error(`Answer validation failed: ${validation.error}`);
           }
         }
-        const sorted = [...data].sort((a, b) => {
-          const tA = a.created_at ? new Date(a.created_at).getTime() : 0;
-          const tB = b.created_at ? new Date(b.created_at).getTime() : 0;
-          return tB - tA;
-        });
+        const sorted = sortByCreatedDesc(data);
         setAnswer(sorted[0] ?? null);
       } catch (err) {
         setAnswer(null);
@@ -167,7 +158,7 @@ function App() {
       }
     };
     fetchAnswers();
-  }, [selectedId]);
+  }, [selectedQuestion?.id]);
 
   useEffect(() => {
     const fetchAnswerDetails = async () => {
@@ -249,8 +240,8 @@ function App() {
           <div className="layout simple">
             <QuestionList
               questions={questions}
-              selectedId={selectedId}
-              setSelectedId={setSelectedId}
+              selectedQuestion={selectedQuestion}
+              setSelectedQuestion={setSelectedQuestion}
             />
             <main className="canvas">
               {selectedQuestion ? (
