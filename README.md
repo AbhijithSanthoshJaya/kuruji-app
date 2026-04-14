@@ -50,7 +50,7 @@ Configured from `VITE_API_BASE_URL`:
 Create `.env` in project root:
 
 ```env
-VITE_API_BASE_URL=http://localhost:3000
+VITE_API_BASE_URL=http://localhost:8000
 ```
 
 Reference template: `.env.example`.
