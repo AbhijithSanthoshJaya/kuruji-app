@@ -158,7 +158,7 @@
 }
 
 .layout.simple {
-  grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
   align-items: start;
 }
 
@@ -430,8 +430,6 @@
   font-size: 0.75rem;
 }
 
-
-
 .code-block {
   background: #0f172a;
   color: #e2e8f0;
@@ -484,13 +482,19 @@
 
 .explain {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   padding: 0.8rem 1rem;
   border-radius: 16px;
   border: 1px dashed var(--ink-200);
   background: #f8fafc;
+  overflow: hidden;
+}
+
+.explain > div {
+  flex: 1;
+  min-width: 0;
 }
 
 .explain-title {
@@ -545,7 +549,11 @@
 }
 .explanation-text {
   white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
   margin: 0;
+  max-width: 100%;
+  overflow: auto;
 }
 
 @keyframes floatIn {
