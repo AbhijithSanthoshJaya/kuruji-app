@@ -244,6 +244,10 @@ function App() {
               setSelectedQuestion={setSelectedQuestion}
             />
             <main className="canvas">
+              <CapturePanel
+                onCapture={startCapture}
+                onBack={() => setStarted(false)}
+              />
               {selectedQuestion ? (
                 <>
                   <QuestionView question={selectedQuestion} />
@@ -253,7 +257,6 @@ function App() {
                   />
                 </>
               ) : null}
-              <CapturePanel onCapture={startCapture} />
             </main>
           </div>
         </>

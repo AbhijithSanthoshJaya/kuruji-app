@@ -1,11 +1,16 @@
 import { useCaptureConsole } from "./useCaptureConsole";
 
-function CapturePanel({ onCapture }) {
+function CapturePanel({ onCapture, onBack }) {
   const { lines, isCapturing, handleCapture, consoleRef } =
     useCaptureConsole(onCapture);
 
   return (
     <section className="capture-panel">
+      <div className="capture-back-wrapper">
+        <button type="button" className="back-button" onClick={onBack}>
+          Back
+        </button>
+      </div>
       <div className="capture-actions">
         <button
           type="button"
