@@ -349,8 +349,10 @@
 .question-description {
   margin: 0;
   color: var(--ink-500);
-  max-width: 520px;
+  max-width: 100%;
   font-size: 0.92rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .eyebrow {
@@ -446,7 +448,7 @@
 }
 
 .code-scroll {
-  max-height: 260px;
+  max-height: 450px;
   overflow: auto;
   padding-right: 0.5rem;
 }
@@ -539,6 +541,15 @@
 
 .capture-button {
   align-self: flex-start;
+  padding: 1rem 2.5rem;
+  font-size: 1.1rem;
+  background: #7c3aed;
+  border: none;
+}
+
+.capture-button:hover {
+  background: #6d28d9;
+  box-shadow: 0 12px 20px rgba(124, 58, 237, 0.3);
 }
 
 .capture-panel {
